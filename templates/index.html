@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>랜덤 RSA 인증</title> <style>
+        /* (스타일 태그는 이전과 동일 - 수정 없음) */
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; max-width: 700px; margin: auto; }
+        .box { border: 2px solid; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; }
+        .client { border-color: #007bff; background-color: #f0f8ff; }
+        .server { border-color: #28a745; background-color: #f6fff0; }
+        button { font-size: 1.1em; padding: 10px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 5px; }
+        #log { border: 1px solid #ccc; background: #f9f9f9; padding: 15px; margin-top: 20px; height: 300px; overflow-y: scroll; font-family: 'Courier New', monospace; }
+        .log-client { color: #0056b3; }
+        .log-server { color: #28a745; }
+        .log-success { color: green; font-weight: bold; }
+        .log-fail { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>RSA 인증 원리 시각화 (랜덤 키)</h1> <div class="box client">
+        <h2>📱 프론트엔드 (나의 앱)</h2>
+        <p>가진 키: <b>개인키 (d={{ d_val }}, N={{ n_val }})</b></p>
+    </div>
+
+    <div class="box server">
+        <h2>🏦 백엔드 (서버)</h2>
+        <p>가진 키: <b>공개키 (e={{ e_val }}, N={{ n_val }})</b></p>
+    </div>
+
+    <button id="authButton">1. 인증 시작하기 (로그인 시도)</button>
+
+    <h2>실시간 인증 로그:</h2>
+    <div id="log"></div>
+
+    <script>
+        // --- (2) JS 상수를 파이썬 변수로 받도록 수정 ---
+        // '{{ 변수명 }}'은 Flask(app.py)가 HTML을 보내기 전,
+        // 이 부분을 실제 값(숫자)으로 바꿔치기 합니다.
+        const D_CLIENT = {{ d_val }};
+        const N_CLIENT = {{ n_val }};
+        // ----------------------------------------------
+
+        const authButton = document.getElementById('authButton');
+        const logDiv = document.getElementById('log');
+
+        function addLog(message, type = '') {
+            logDiv.innerHTML += `<div>${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // '인증 시작하기' 버튼 클릭 (이하 로직은 수정 없음)
+        authButton.onclick = async function() {
+            addLog("--- 🚀 인증 프로세스 시작 ---");
+
+            try {
+                addLog("<b class='log-client'>[앱 -> 서버]</b>: 인증할 메시지(M) 주세요.", "log-client");
+                const response = await fetch('/get-challenge');
+                const data = await response.json();
+                const message = data.message; 
+                
+                addLog(`<b class='log-server'>[서버 -> 앱]</b>: M=<b>${message}</b> 입니다.`, "log-server");
+
+                // (중요!) 이제 D_CLIENT와 N_CLIENT는
+                // N=221이 아닌, 서버가 새로 생성한 랜덤 키입니다.
+                addLog(`<b>[앱]</b>: 개인키(d=${D_CLIENT})로 M=${message}를 서명합니다...`, "log-client");
+                
+                const signature = BigInt(message) ** BigInt(D_CLIENT) % BigInt(N_CLIENT);
+                addLog(`<b>[앱]</b>: 서명(S) <b>${signature}</b> 생성 완료!`, "log-client");
+
+                addLog(`<b class='log-client'>[앱 -> 서버]</b>: 원본(M=${message})과 서명(S=${signature}) 보냅니다.`, "log-client");
+                
+                const verifyResponse = await fetch('/verify-signature', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        original_message: message,
+                        signature: Number(signature)
+                    })
+                });
+                const verifyData = await verifyResponse.json();
+
+                addLog(`<b class='log-server'>[서버 -> 앱]</b>: 검증 완료. ${verifyData.detail}`, "log-server");
+                if (verifyData.success) {
+                    addLog("<b>🎉 최종 결과: 인증 성공! (로그인 완료)</b>", "log-success");
+                } else {
+                    addLog("<b>❌ 최종 결과: 인증 실패! (가짜 서명)</b>", "log-fail");
+                }
+
+            } catch (error) {
+                addLog(`<b>[오류]</b>: ${error.message}. 서버(app.py)가 켜져 있나요?`, "log-fail");
+            }
+        };
+    </script>
+</body>
+</html>
