@@ -83,3 +83,6 @@ def verify_signature():
 if __name__ == '__main__':
     print(f"🚀 RSA 랜덤 인증 서버를 시작합니다. http://127.0.0.1:5000/ 주소로 접속하세요.")
     app.run(port=5000, debug=True)
+    app.run(port=5000, debug=True)
+
+# === Deploy Trigger 1 ===
