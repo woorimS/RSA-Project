@@ -65,7 +65,8 @@ def get_challenge():
 def verify_signature():
     try:
         data = request.get_json()
-        signature = data.get('signature')
+        # 문자열로 넘어온 서명을 숫자로 변환
+        signature = int(data.get('signature'))
         original_message = data.get('original_message')
 
         # [서버 검증 로직]
