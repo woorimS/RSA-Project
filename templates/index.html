@@ -2,92 +2,153 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>랜덤 RSA 인증</title> <style>
-        /* (스타일 태그는 이전과 동일 - 수정 없음) */
-        body { font-family: sans-serif; line-height: 1.6; padding: 20px; max-width: 700px; margin: auto; }
-        .box { border: 2px solid; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; }
-        .client { border-color: #007bff; background-color: #f0f8ff; }
-        .server { border-color: #28a745; background-color: #f6fff0; }
-        button { font-size: 1.1em; padding: 10px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 5px; }
-        #log { border: 1px solid #ccc; background: #f9f9f9; padding: 15px; margin-top: 20px; height: 300px; overflow-y: scroll; font-family: 'Courier New', monospace; }
-        .log-client { color: #0056b3; }
-        .log-server { color: #28a745; }
-        .log-success { color: green; font-weight: bold; }
-        .log-fail { color: red; font-weight: bold; }
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSA 인증 시뮬레이터</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --primary: #0056b3;
+            --success: #28a745;
+            --error: #dc3545;
+            --border: #dee2e6;
+        }
+        body { font-family: 'Pretendard', 'Malgun Gothic', sans-serif; background-color: var(--bg-color); color: #333; padding: 20px; max-width: 900px; margin: 0 auto; }
+        
+        header { text-align: center; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+        h1 { font-size: 1.8rem; margin: 0; color: #2c3e50; }
+        p.subtitle { color: #6c757d; margin-top: 5px; font-weight: 500; }
+
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card h3 { margin-top: 0; font-size: 1.1rem; color: #495057; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        .key-display { font-family: 'Consolas', monospace; background: #f1f3f5; padding: 10px; border-radius: 4px; word-break: break-all; font-size: 0.9rem; }
+        .label { font-weight: bold; color: #495057; }
+
+        .controls { text-align: center; margin: 30px 0; }
+        button { background-color: var(--primary); color: white; border: none; padding: 12px 30px; font-size: 1rem; border-radius: 4px; cursor: pointer; transition: background 0.2s; font-weight: bold; }
+        button:hover { background-color: #004494; }
+
+        /* 시스템 로그 콘솔 스타일 */
+        .console-window { background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px; height: 400px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 0.9rem; line-height: 1.6; border: 1px solid #333; }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 2px; }
+        .log-time { color: #569cd6; margin-right: 10px; font-size: 0.8rem; }
+        .log-client { color: #4ec9b0; } /* 청록색 */
+        .log-server { color: #ce9178; } /* 주황색 */
+        .log-math { color: #dcdcaa; padding-left: 20px; display: block; margin-top: 2px; } /* 아이보리색 */
+        .log-success { color: #6a9955; font-weight: bold; }
+        .log-error { color: #f44747; }
+
+        .info-section { margin-top: 40px; padding: 20px; background: #e9ecef; border-radius: 8px; font-size: 0.9rem; line-height: 1.6; }
+        
+        @media (max-width: 768px) { .dashboard { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <h1>RSA 인증 원리 시각화 (랜덤 키)</h1> <div class="box client">
-        <h2>📱 프론트엔드 (나의 앱)</h2>
-        <p>가진 키: <b>개인키 (d={{ d_val }}, N={{ n_val }})</b></p>
+
+    <header>
+        <h1>RSA 인증 시뮬레이터</h1>
+        <p class="subtitle">공개키 암호화 원리 및 전자서명 과정 시각화 도구</p>
+    </header>
+
+    <div class="dashboard">
+        <div class="card">
+            <h3>🖥️ 클라이언트 (사용자)</h3>
+            <div class="key-display">
+                <span class="label">개인키 (d):</span> {{ d }}<br>
+                <span class="label">공용 모듈 (N):</span> {{ n }}
+            </div>
+            <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">
+                * <strong>서명 생성(Signing)</strong>에 사용되는 비밀 키입니다.
+            </p>
+        </div>
+
+        <div class="card">
+            <h3>☁️ 서버 (인증 기관)</h3>
+            <div class="key-display">
+                <span class="label">공개키 (e):</span> {{ e }}<br>
+                <span class="label">공용 모듈 (N):</span> {{ n }}
+            </div>
+            <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">
+                * <strong>서명 검증(Verification)</strong>에 사용되는 공개 키입니다.
+            </p>
+        </div>
     </div>
 
-    <div class="box server">
-        <h2>🏦 백엔드 (서버)</h2>
-        <p>가진 키: <b>공개키 (e={{ e_val }}, N={{ n_val }})</b></p>
+    <div class="controls">
+        <button id="authBtn">인증 프로토콜 실행하기</button>
     </div>
 
-    <button id="authButton">1. 인증 시작하기 (로그인 시도)</button>
+    <div class="console-window" id="consoleLog">
+        <div class="log-entry">> 시스템 준비 완료. 사용자의 작업을 대기 중...</div>
+    </div>
 
-    <h2>실시간 인증 로그:</h2>
-    <div id="log"></div>
+    <div class="info-section">
+        <strong>기술 노트 (Technical Note):</strong><br>
+        본 시뮬레이션은 <code>pycryptodome</code> 라이브러리를 사용하여 실시간 키 생성을 수행합니다.<br>
+        • <strong>전자 서명:</strong> S = M<sup>d</sup> mod N (클라이언트 측 JS BigInt 연산)<br>
+        • <strong>서명 검증:</strong> M' = S<sup>e</sup> mod N (서버 측 Python pow 함수 연산)
+    </div>
 
     <script>
-        // --- (2) JS 상수를 파이썬 변수로 받도록 수정 ---
-        // '{{ 변수명 }}'은 Flask(app.py)가 HTML을 보내기 전,
-        // 이 부분을 실제 값(숫자)으로 바꿔치기 합니다.
-        const D_CLIENT = {{ d_val }};
-        const N_CLIENT = {{ n_val }};
-        // ----------------------------------------------
+        // 서버에서 전달받은 키 값을 BigInt로 변환하여 저장
+        const CLIENT_D = BigInt("{{ d }}");
+        const CLIENT_N = BigInt("{{ n }}");
 
-        const authButton = document.getElementById('authButton');
-        const logDiv = document.getElementById('log');
+        const consoleLog = document.getElementById('consoleLog');
 
-        function addLog(message, type = '') {
-            logDiv.innerHTML += `<div>${message}</div>`;
-            logDiv.scrollTop = logDiv.scrollHeight;
+        // 로그 출력 함수 (타임스탬프 포함)
+        function log(msg, type = '') {
+            const now = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+            const spanClass = type ? `log-${type}` : '';
+            consoleLog.innerHTML += `<div class="log-entry"><span class="log-time">[${now}]</span><span class="${spanClass}">${msg}</span></div>`;
+            consoleLog.scrollTop = consoleLog.scrollHeight;
         }
 
-        // '인증 시작하기' 버튼 클릭 (이하 로직은 수정 없음)
-        authButton.onclick = async function() {
-            addLog("--- 🚀 인증 프로세스 시작 ---");
-
+        document.getElementById('authBtn').onclick = async () => {
+            consoleLog.innerHTML = '<div class="log-entry">> 인증 시퀀스를 초기화합니다...</div>';
+            
             try {
-                addLog("<b class='log-client'>[앱 -> 서버]</b>: 인증할 메시지(M) 주세요.", "log-client");
-                const response = await fetch('/get-challenge');
-                const data = await response.json();
-                const message = data.message; 
-                
-                addLog(`<b class='log-server'>[서버 -> 앱]</b>: M=<b>${message}</b> 입니다.`, "log-server");
+                // 1단계: 챌린지 요청
+                log("서버에 챌린지(인증용 문제)를 요청합니다...", "client");
+                const res1 = await fetch('/api/challenge');
+                const data1 = await res1.json();
+                const message = data1.message;
+                log(`서버로부터 챌린지 메시지 수신 (M): ${message}`, "server");
 
-                // (중요!) 이제 D_CLIENT와 N_CLIENT는
-                // N=221이 아닌, 서버가 새로 생성한 랜덤 키입니다.
-                addLog(`<b>[앱]</b>: 개인키(d=${D_CLIENT})로 M=${message}를 서명합니다...`, "log-client");
+                // 2단계: 서명 생성 (클라이언트)
+                log("개인키를 사용하여 전자 서명을 계산 중...", "client");
+                // S = M^d mod N
+                const signature = BigInt(message) ** CLIENT_D % CLIENT_N;
                 
-                const signature = BigInt(message) ** BigInt(D_CLIENT) % BigInt(N_CLIENT);
-                addLog(`<b>[앱]</b>: 서명(S) <b>${signature}</b> 생성 완료!`, "log-client");
+                log(`계산 공식: S = ${message}^${CLIENT_D} mod ${CLIENT_N}`, "math");
+                log(`생성된 서명 값 (S): ${signature}`, "client");
 
-                addLog(`<b class='log-client'>[앱 -> 서버]</b>: 원본(M=${message})과 서명(S=${signature}) 보냅니다.`, "log-client");
-                
-                const verifyResponse = await fetch('/verify-signature', {
+                // 3단계: 서명 전송 및 검증 요청
+                log("서명과 원본 메시지를 서버로 전송합니다...", "client");
+                const res2 = await fetch('/api/verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         original_message: message,
-                        signature: Number(signature)
+                        signature: signature.toString()
                     })
                 });
-                const verifyData = await verifyResponse.json();
+                const data2 = await res2.json();
 
-                addLog(`<b class='log-server'>[서버 -> 앱]</b>: 검증 완료. ${verifyData.detail}`, "log-server");
-                if (verifyData.success) {
-                    addLog("<b>🎉 최종 결과: 인증 성공! (로그인 완료)</b>", "log-success");
+                // 4단계: 최종 결과 확인
+                if (data2.valid) {
+                    log(`서버 검증 결과: 유효함 (Valid)`, "server");
+                    log(`복호화된 값: ${data2.decrypted}`, "math");
+                    log(`🎉 인증 성공! (신원 확인 완료)`, "success");
                 } else {
-                    addLog("<b>❌ 최종 결과: 인증 실패! (가짜 서명)</b>", "log-fail");
+                    log(`서버 검증 결과: 실패 (Invalid)`, "error");
+                    log(`❌ 인증 실패! (서명이 일치하지 않음)`, "error");
                 }
 
             } catch (error) {
-                addLog(`<b>[오류]</b>: ${error.message}. 서버(app.py)가 켜져 있나요?`, "log-fail");
+                log(`오류 발생: ${error.message}`, "error");
             }
         };
     </script>
